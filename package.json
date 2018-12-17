@@ -13,7 +13,7 @@
 		"type": "git",
 		"url": "https://github.com/brunnerh/jisho-cli"
 	},
-	"main": "out/jisho-cli.js",
+	"main": "out/jisho.js",
 	"bin": {
 		"jisho-cli": "out/jisho.ts"
 	},
