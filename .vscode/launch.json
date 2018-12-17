@@ -1,0 +1,41 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "node",
+			"request": "attach",
+			"name": "Attach",
+			"processId": "${command:PickProcess}"
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Launch [i + term]",
+			"program": "${workspaceFolder}/out/jisho.js",
+			"outFiles": [
+				"${workspaceFolder}/out/*.js"
+			],
+			"args": ["-i", "arashi"]
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Launch [i]",
+			"program": "${workspaceFolder}/out/jisho.js",
+			"outFiles": [
+				"${workspaceFolder}/out/*.js"
+			],
+			"args": ["-i"]
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Launch [term]",
+			"program": "${workspaceFolder}/out/jisho.js",
+			"outFiles": [
+				"${workspaceFolder}/out/*.js"
+			],
+			"args": ["arashi"]
+		},
+	]
+}

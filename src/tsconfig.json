@@ -1,0 +1,17 @@
+{
+	"extends": "../tsconfig.common.json",
+	"include": ["./**.ts"],
+	"compilerOptions": {
+		"target": "es6",
+		"outDir": "../out",
+		"lib": [
+			"es2015",
+			"es2015.promise",
+			"dom",
+			"dom.iterable"
+		],
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"downlevelIteration": true
+	}
+}
