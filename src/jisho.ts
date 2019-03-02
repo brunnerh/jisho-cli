@@ -3,27 +3,35 @@ import commandLineUsage from 'command-line-usage';
 import * as puppeteer from 'puppeteer';
 import * as readline from 'readline';
 import { modify, Bold, Faint, FgBrightGreen, FgBrightMagenta, FgBrightYellow, FgYellow } from 'ansi-es6';
+import { CommandLineArgs, ColorOption, isValidColorOption } from './command-line';
 
 const main = async () =>
 {
-	const { help, interactive, term } = <CommandLineArgs>commandLineArgs([
+	const { help, interactive, term, color } = <CommandLineArgs>commandLineArgs([
 		{ name: 'help', alias: 'h', type: Boolean, defaultValue: false },
 		{ name: 'interactive', alias: 'i', type: Boolean, defaultValue: false },
+		{ name: 'color', alias: 'c', type: String, defaultValue: 'auto' },
 		{ name: 'term', defaultOption: true, type: String },
 	]);
+
+	if (isValidColorOption(color) == false)
+	{
+		console.error(`Invalid value for 'color': ${color}`);
+		process.exit(1);
+	}
 
 	if (help || interactive == false && term == null)
 	{
 		const usage = commandLineUsage([
 			{
 				header: 'jisho-cli',
-				content: 'Look up a term, English or Japanese, on jisho.org.'
+				content: 'Look up a term, English or Japanese, on jisho.org.',
 			},
 			{
 				header: 'Synopsis',
 				content: [
-					'jisho-cli {underline term}',
-					'jisho-cli {bold -i} [{underline term}]',
+					'jisho-cli [options] {underline term}',
+					'jisho-cli [options] {bold -i} [{underline term}]',
 				]
 			},
 			{
@@ -32,12 +40,19 @@ const main = async () =>
 					{
 						alias: 'i',
 						name: 'interactive',
-						description: 'If set, the application executes interactively. Faster when looking up multiple terms.'
+						description: 'If set, the application executes interactively. Faster when looking up multiple terms.',
+					},
+					{
+						alias: 'c',
+						name: 'color',
+						description: 'Enables or disables color output.' +
+							' Valid values are: {underline auto} (default), {underline always}, {underline never}.' +
+							'\n{underline auto} enables coloring for TTYs.',
 					},
 					{
 						alias: 'h',
 						name: 'help',
-						description: 'Print this message.'
+						description: 'Print this message.',
 					}
 				]
 			}
@@ -57,6 +72,8 @@ const main = async () =>
 		terminal: process.stdin.isTTY,
 	});
 
+	const colorize = conditionalModify(useColor(<ColorOption>color));
+
 	const question = (q: string) => new Promise<string>(res =>
 	{
 		readInterface.question(q, res);
@@ -72,7 +89,7 @@ const main = async () =>
 	while (true)
 	{
 		const rawTerm = needInput ?
-			await question(autoModify("Search term: ", FgBrightYellow)) : term!;
+			await question(colorize("Search term: ", FgBrightYellow)) : term!;
 
 		const currentTerm = rawTerm.trim();
 		if (currentTerm == '')
@@ -81,7 +98,7 @@ const main = async () =>
 		needInput = true;
 
 		if (process.stdout.isTTY)
-			process.stdout.write(autoModify('Searching...', FgYellow));
+			process.stdout.write(colorize('Searching...', FgYellow));
 
 		const clr = () =>
 		{
@@ -99,8 +116,8 @@ const main = async () =>
 			
 			results.forEach(result =>
 			{
-				console.log(`${autoModify(result.text, Bold, FgBrightGreen)} [${autoModify(result.reading, FgBrightMagenta)}]:`);
-				result.meanings.forEach((m, i) => console.log(`\t${autoModify(`${i + 1}:`, Faint)} ${m}`));
+				console.log(`${colorize(result.text, Bold, FgBrightGreen)} [${colorize(result.reading, FgBrightMagenta)}]:`);
+				result.meanings.forEach((m, i) => console.log(`\t${colorize(`${i + 1}:`, Faint)} ${m}`));
 				console.log();
 			});
 		}
@@ -121,9 +138,22 @@ const main = async () =>
 	readInterface.close();
 }
 
-const autoModify = (text: string, ...modifiers: string[]) =>
+const useColor = (colorArgument: ColorOption) =>
 {
-	return process.stdout.isTTY ? modify(text, ...modifiers) : text;
+	switch (colorArgument)
+	{
+		case 'auto':
+			return 'NO_COLOR' in process.env == false && process.stdout.isTTY == true;
+		case 'always':
+			return true;
+		case 'never':
+			return false;
+	}
+}
+
+const conditionalModify = (useColor: boolean) => (text: string, ...modifiers: string[]) =>
+{
+	return useColor ? modify(text, ...modifiers) : text;
 }
 
 async function lookUpTerm(page: puppeteer.Page, term: string): Promise<Result[]>
@@ -158,16 +188,4 @@ interface Result
 	text: string;
 	reading: string;
 	meanings: string[];
-}
-
-interface CommandLineArgs
-{
-	/** Show help? */
-	help: boolean;
-
-	/** Interactive? */
-	interactive: boolean;
-
-	/** Search term. */
-	term?: string;
 }

@@ -5,13 +5,14 @@
 		"target": "es6",
 		"outDir": "../out",
 		"lib": [
+			"esnext",
 			"es2015",
 			"es2015.promise",
 			"dom",
-			"dom.iterable"
+			"dom.iterable",
 		],
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
-		"downlevelIteration": true
-	}
+		"downlevelIteration": true,
+	},
 }

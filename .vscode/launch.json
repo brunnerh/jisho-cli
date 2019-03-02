@@ -10,6 +10,16 @@
 		{
 			"type": "node",
 			"request": "launch",
+			"name": "Launch [h]",
+			"program": "${workspaceFolder}/out/jisho.js",
+			"outFiles": [
+				"${workspaceFolder}/out/*.js"
+			],
+			"args": ["-h"]
+		},
+		{
+			"type": "node",
+			"request": "launch",
 			"name": "Launch [i + term]",
 			"program": "${workspaceFolder}/out/jisho.js",
 			"outFiles": [
