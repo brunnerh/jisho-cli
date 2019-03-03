@@ -6,6 +6,8 @@ Here some output for the search term `arashi`:
 
 ![screenshot](https://raw.githubusercontent.com/brunnerh/jisho-cli/master/readme-files/screenshot.png)
 
+**Note:** The extraction of the kana reading may not be completely accurate in some cases. Also, changes to the site may break the application.
+
 ## Installation
 
 The application can be installed from [npm](https://www.npmjs.com/):
