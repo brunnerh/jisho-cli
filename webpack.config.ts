@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { Configuration, BannerPlugin } from 'webpack';
-import * as nodeExternals from 'webpack-node-externals';
+import nodeExternals from 'webpack-node-externals';
 
 const config = <Configuration>{
 	mode: 'production',
@@ -18,8 +18,8 @@ const config = <Configuration>{
 		rules: [
 			{
 				include: /\.ts$/,
-				loader: 'awesome-typescript-loader',
-				options: { configFileName: path.resolve(__dirname, './src/tsconfig.json') }
+				loader: 'ts-loader',
+				options: { configFile: path.resolve(__dirname, './src/tsconfig.json') }
 			}
 		]
 	},
@@ -29,8 +29,9 @@ const config = <Configuration>{
 			raw: true,
 		})
 	],
+    externalsPresets: { node: true },
 	externals: [nodeExternals({
-		whitelist: 'ansi-es6'
+		allowlist: 'ansi-es6'
 	})],
 }
 

@@ -1,6 +1,7 @@
 import commandLineArgs from 'command-line-args';
 import commandLineUsage from 'command-line-usage';
-import * as puppeteer from 'puppeteer';
+import { fetch } from 'undici';
+import { JSDOM } from 'jsdom';
 import * as readline from 'readline';
 import { modify, Bold, Faint, FgBrightGreen, FgBrightMagenta, FgBrightYellow, FgYellow, FgCyan } from 'ansi-es6';
 import { CommandLineArgs, ColorOption, isValidColorOption } from './command-line';
@@ -83,12 +84,6 @@ const main = async () =>
 		});
 	});
 
-	const browser = await puppeteer.launch({
-		// TODO: remove if possible
-		args: ["--no-sandbox"]
-	});
-	const page = await browser.newPage();
-
 	let needInput = term == null;
 	while (true)
 	{
@@ -115,7 +110,7 @@ const main = async () =>
 
 		try
 		{
-			const results = await lookUpTerm(page, currentTerm);
+			const results = await lookUpTerm(currentTerm);
 			clr();
 
 			results.forEach(result =>
@@ -152,8 +147,6 @@ const main = async () =>
 			break;
 	}
 
-	await page.close();
-	await browser.close();
 	readInterface.close();
 }
 
@@ -175,12 +168,18 @@ const conditionalModify = (useColor: boolean) => (text: string, ...modifiers: st
 	return useColor ? modify(text, ...modifiers) : text;
 }
 
-async function lookUpTerm(page: puppeteer.Page, term: string): Promise<Result[]>
+async function lookUpTerm(term: string): Promise<Result[]>
 {
-	await page.goto(`http://jisho.org/search/${term}`);
-	const results: Result[] = await page.evaluate(() =>
-	{
-		return [...document.querySelectorAll("#primary .concept_light")].map(block =>
+	const response = await fetch(`http://jisho.org/search/${term}`);
+	if (response.ok == false)
+		throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+
+	const html = await response.text();
+	const dom = new JSDOM(html);
+	const { document, Node } = dom.window;
+
+	const results: Result[] = [...document.querySelectorAll("#primary .concept_light")]
+		.map(block =>
 		{
 			const jp = block.querySelector('.concept_light-representation');
 			if (jp == null)
@@ -191,7 +190,7 @@ async function lookUpTerm(page: puppeteer.Page, term: string): Promise<Result[]>
 			const meanings = [...block.querySelector('.meanings-wrapper')!.children]
 				.map(m =>
 				{
-					const type = m.classList.contains('meaning-tags')
+					const type: MeaningType = m.classList.contains('meaning-tags')
 						? 'tag'
 						: 'meaning';
 
@@ -234,28 +233,30 @@ async function lookUpTerm(page: puppeteer.Page, term: string): Promise<Result[]>
 			const furigana = furiganaContainer.querySelector('ruby') == null
 				? [...furiganaContainer.children].map(e => e.textContent!.trim())
 				: Array.from(furiganaContainer.querySelector('rt')!.textContent!.trim())
-			const reading = furigana.map((e, i) =>
-			{
-				return e == ''
-					// If the furigana is empty and the corresponding text is a kanji,
-					// the previous furigana already contains the transcription.
-					? (i >= textParts.length || textParts[i].type == 'kanji' ? '' : textParts[i].text)
-					: e
-			})
+			const reading = furigana
+				.map((e, i) =>
+				{
+					return e == ''
+						// If the furigana is empty and the corresponding text is a kanji,
+						// the previous furigana already contains the transcription.
+						? (i >= textParts.length || textParts[i].type == 'kanji' ? '' : textParts[i].text)
+						: e
+				})
 				.join('');
 
 			return { text, reading, meanings };
 		});
-	});
 
 	return results;
 }
 
 main();
 
+type MeaningType = 'tag' | 'meaning';
+
 interface Meaning
 {
-	type: 'tag' | 'meaning';
+	type: MeaningType;
 	number?: string;
 	text: string;
 }
