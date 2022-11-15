@@ -4,16 +4,18 @@ import { fetch } from 'undici';
 import { JSDOM } from 'jsdom';
 import * as readline from 'readline';
 import { modify, Bold, Faint, FgBrightGreen, FgBrightMagenta, FgBrightYellow, FgYellow, FgCyan } from 'ansi-es6';
-import { CommandLineArgs, ColorOption, isValidColorOption } from './command-line';
+import { CommandLineArgs, ColorOption, isValidColorOption, OptionDefinition } from './command-line';
 
 const main = async () =>
 {
-	const { help, interactive, term, color } = <CommandLineArgs>commandLineArgs([
+	const definitions: OptionDefinition[] = [
 		{ name: 'help', alias: 'h', type: Boolean, defaultValue: false },
 		{ name: 'interactive', alias: 'i', type: Boolean, defaultValue: false },
+		{ name: 'reverse', alias: 'r', type: Boolean, defaultValue: false },
 		{ name: 'color', alias: 'c', type: String, defaultValue: 'auto' },
 		{ name: 'term', defaultOption: true, type: String },
-	]);
+	];
+	const { help, interactive, term, reverse: topToBottom, color } = <CommandLineArgs>commandLineArgs(definitions);
 
 	if (isValidColorOption(color) == false)
 	{
@@ -49,6 +51,11 @@ const main = async () =>
 						description: 'Enables or disables color output.' +
 							' Valid values are: {underline auto} (default), {underline always}, {underline never}.' +
 							'\n{underline auto} enables coloring for TTYs.',
+					},
+					{
+						alias: 'r',
+						name: 'reverse',
+						description: 'Show results top to bottom.',
 					},
 					{
 						alias: 'h',
@@ -112,6 +119,9 @@ const main = async () =>
 		{
 			const results = await lookUpTerm(currentTerm);
 			clr();
+
+			if (topToBottom == false)
+				results.reverse();
 
 			results.forEach(result =>
 			{
