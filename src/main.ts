@@ -1,10 +1,12 @@
+import { Bold, Faint, FgBrightGreen, FgBrightMagenta, FgBrightYellow, FgCyan, FgYellow, modify } from 'ansi-es6';
 import commandLineArgs from 'command-line-args';
 import commandLineUsage from 'command-line-usage';
-import { fetch } from 'undici';
-import { JSDOM } from 'jsdom';
 import * as readline from 'readline';
-import { modify, Bold, Faint, FgBrightGreen, FgBrightMagenta, FgBrightYellow, FgYellow, FgCyan } from 'ansi-es6';
-import { CommandLineArgs, ColorOption, isValidColorOption, OptionDefinition } from './command-line';
+import { fetch } from 'undici';
+import { ColorOption, CommandLineArgs, isValidColorOption, OptionDefinition } from './command-line';
+import { parse, Result, SupplementalInfo } from './parsing';
+
+const base = 'https://jisho.org';
 
 const main = async () =>
 {
@@ -126,7 +128,7 @@ const main = async () =>
 			results.forEach(result =>
 			{
 				console.log(`${colorize(result.text, Bold, FgBrightGreen)} [${colorize(result.reading, FgBrightMagenta)}]:`);
-				result.meanings.forEach(m =>
+				result.items.forEach(m =>
 				{
 					switch (m.type)
 					{
@@ -134,8 +136,12 @@ const main = async () =>
 							const prefix = m.number === undefined
 								? ''
 								: (colorize(m.number, Faint) + ' ');
+							
+							const suffix = m.supplementalInfo.length == 0
+								? ''
+								: (colorize(' - ' + renderInfo(m.supplementalInfo), Faint));
 
-							console.log(`\t${prefix}${m.text}`);
+							console.log(`\t${prefix}${m.text}${suffix}`);
 							break;
 						case 'tag':
 							console.log(`\t${colorize(m.text, FgCyan)}`);
@@ -180,100 +186,33 @@ const conditionalModify = (useColor: boolean) => (text: string, ...modifiers: st
 
 async function lookUpTerm(term: string): Promise<Result[]>
 {
-	const response = await fetch(`http://jisho.org/search/${term}`);
+	const response = await fetch(`${base}/search/${term}`);
 	if (response.ok == false)
 		throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 
 	const html = await response.text();
-	const dom = new JSDOM(html);
-	const { document, Node } = dom.window;
+	return parse(html);
+}
 
-	const results: Result[] = [...document.querySelectorAll("#primary .concept_light")]
-		.map(block =>
+function renderInfo(supplementalInfo: SupplementalInfo[])
+{
+	return supplementalInfo
+		.map(x =>
 		{
-			const jp = block.querySelector('.concept_light-representation');
-			if (jp == null)
-				throw new Error("Result list not found.");
+			switch (x.type)
+			{
+				case 'tag':
+					return x.text;
+				case 'see-also':
+					return `see also ${link(x.text, base + x.href)}`;
+			}
+		})
+		.join(', ');
+}
 
-			const text = jp.querySelector('.text')!.textContent!.trim();
-
-			const meanings = [...block.querySelector('.meanings-wrapper')!.children]
-				.map(m =>
-				{
-					const type: MeaningType = m.classList.contains('meaning-tags')
-						? 'tag'
-						: 'meaning';
-
-					let text: string;
-					let number: string | undefined;
-					switch (type)
-					{
-						case 'tag':
-							text = m.textContent!.trim();
-							break;
-						case 'meaning':
-							const meaningElement = m.querySelector('.meaning-meaning');
-							text = meaningElement
-								? meaningElement.textContent!.trim()
-								: m.textContent!.trim();
-
-							const numberElement = m.querySelector('.meaning-definition-section_divider');
-							if (numberElement)
-								number = numberElement.textContent!.trim();
-							break;
-						default:
-							throw Error(`Unknown type: ${type}`);
-					}
-
-					return { type, number, text };
-				});
-
-			const textParts = [...jp.querySelector('.text')!.childNodes]
-				.map(e =>
-				{
-					// Kanji are in text nodes, Kana in <span> elements.
-					// Kana appear as single elements, adjacent Kanji exist in the same text node.
-					const type = e.nodeType === Node.ELEMENT_NODE ? 'kana' : 'kanji';
-					return Array.from(e.textContent!.trim()).map(char => ({ text: char, type }));
-				})
-				.reduce((arr, x) => arr.concat(x), []);
-
-			const furiganaContainer = jp.querySelector('.furigana')!;
-			// If <ruby> is used the furigana are within an <rt> tag.
-			const furigana = furiganaContainer.querySelector('ruby') == null
-				? [...furiganaContainer.children].map(e => e.textContent!.trim())
-				: Array.from(furiganaContainer.querySelector('rt')!.textContent!.trim())
-			const reading = furigana
-				.map((e, i) =>
-				{
-					return e == ''
-						// If the furigana is empty and the corresponding text is a kanji,
-						// the previous furigana already contains the transcription.
-						? (i >= textParts.length || textParts[i].type == 'kanji' ? '' : textParts[i].text)
-						: e
-				})
-				.join('');
-
-			return { text, reading, meanings };
-		});
-
-	return results;
+function link(text: string, href: string)
+{
+	return `\x1b]8;;${href}\x1b\\${text}\x1b]8;;\x1b\\`;
 }
 
 main();
-
-type MeaningType = 'tag' | 'meaning';
-
-interface Meaning
-{
-	type: MeaningType;
-	number?: string;
-	text: string;
-}
-
-interface Result
-{
-	text: string;
-	reading: string;
-	meanings: Meaning[];
-}

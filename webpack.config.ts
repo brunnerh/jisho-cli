@@ -6,10 +6,13 @@ const config = <Configuration>{
 	mode: 'production',
 	devtool: "source-map",
 	target: "node",
-	entry: path.resolve(__dirname, './src/jisho.ts'),
+	entry: path.resolve(__dirname, './src/main.ts'),
 	output: {
 		path: path.resolve(__dirname, 'out'),
-		filename: 'jisho.js'
+		filename: 'jisho.js',
+	},
+	optimization: {
+		minimize: false,
 	},
 	resolve: {
 		extensions: [".ts", ".js"],
@@ -29,7 +32,7 @@ const config = <Configuration>{
 			raw: true,
 		})
 	],
-    externalsPresets: { node: true },
+	externalsPresets: { node: true },
 	externals: [nodeExternals({
 		allowlist: 'ansi-es6'
 	})],

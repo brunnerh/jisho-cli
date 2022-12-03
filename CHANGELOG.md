@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.4.0] - 2022-12-03
+
+- Output supplemental info such as "Colloquialism", "Abbreviation", dialects and "see also" references.
+
 ## [0.3.0] - 2022-11-15
 
 - Reverse result order by default, so the most relevant results are at the bottom and closer to the cursor.
