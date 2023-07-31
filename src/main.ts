@@ -5,6 +5,7 @@ import * as readline from 'readline';
 import { fetch } from 'undici';
 import { ColorOption, CommandLineArgs, isValidColorOption, OptionDefinition } from './command-line';
 import { parse, Result, SupplementalInfo } from './parsing';
+import pkg from '../package.json';
 
 const base = 'https://jisho.org';
 
@@ -186,7 +187,11 @@ const conditionalModify = (useColor: boolean) => (text: string, ...modifiers: st
 
 async function lookUpTerm(term: string): Promise<Result[]>
 {
-	const response = await fetch(`${base}/search/${term}`);
+	const response = await fetch(`${base}/search/${term}`, {
+		headers: {
+			'User-Agent': `jisho-cli v${pkg.version} (${pkg.repository.url})`,
+		},
+	});
 	if (response.ok == false)
 		throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 

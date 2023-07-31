@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.4.1] - 2023-07-31
+
+- Identify requests via `User-Agent` header.
+
 ## [0.4.0] - 2022-12-03
 
 - Output supplemental info such as "Colloquialism", "Abbreviation", dialects and "see also" references.
